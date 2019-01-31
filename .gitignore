@@ -1,0 +1,5 @@
+Pics/*
+__pycache__/*
+.ipynb_checkpoints/*
+*Results*/*
+*Logs*/*
