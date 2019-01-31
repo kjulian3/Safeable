@@ -53,7 +53,7 @@ def advisoryParams(actInd,eps=1,pd=0):
 def advName(adv):
     if adv==COC:
         return "COC"
-    if adv==DNC:
+    elif adv==DNC:
         return 'DNC'
     elif adv==DND:
         return 'DND'
@@ -72,6 +72,20 @@ def advName(adv):
     else: 
         return "UNKNOWN"
 
+def advInd(adv):
+    adv = adv.upper()
+    if   adv=="COC":      return COC
+    elif adv=="DNC":      return DNC
+    elif adv=="DND":      return DND
+    elif adv=="DES1500":  return DES1500
+    elif adv=="CL1500":   return CL1500
+    elif adv=="SDES1500": return SDES1500
+    elif adv=="SCL1500":  return SCL1500
+    elif adv=="SDES2500": return SDES2500
+    elif adv=="SCL2500":  return SCL2500
+    return -1
+    
+    
 def getPossibleAdvisories(pra):
     if pra<=DND:
         return [COC,DNC,DND,DES1500,CL1500]
