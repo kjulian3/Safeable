@@ -405,7 +405,7 @@ def innerApproximate(bnd,dt,dti):
         
         bounds += [Bound(t0,t1,[h0,(h1-h0)/dti,0],bnd.isLower)]
         t0=t1
-    if len(bounds)==0:
+    if len(bounds)==0 and maxTau>minTau:
         h0 = bnd.getH_minTau()
         h1 = bnd.getH_maxTau()
         bounds+= [Bound(minTau,maxTau,[h0,(h1-h0)/(maxTau-minTau),0],bnd.isLower)]
