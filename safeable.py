@@ -135,13 +135,13 @@ class Bound(object):
     def overlaps(self,bnd):
         c1 = self.getStandardCoeffs()
         c2 =  bnd.getStandardCoeffs()
-        return np.all([c1[i]==c2[i] for i in range(len(c1))])
+        return np.all([abs(c1[i]-c2[i])<1e-10 for i in range(len(c1))])
     
     '''
     Return true if the quadratic boundary is actually linear
     '''
     def isLinear(self):
-        return self.coeffs[2]==0.0
+        return abs(self.coeffs[2])<1e-10
     
     '''
     Create a copy of the bound
@@ -159,17 +159,18 @@ class Bound(object):
         b = a1 - a2*ma
         a = 0.5*a2
         disc = b**2-4*a*c
-        if disc<0:
+        if disc<-1e-10:
             return []
-        elif disc==0:
-            if self.inRange(-b/2/a): return [-b/2/a]
+        elif abs(disc)<1e-10:
+            t = -b/2/a
+            if t<=self.getMaxTau() and t>=self.getMinTau(): return [-b/2/a]
             return []
         times = []
         t1 = (-b-np.sqrt(disc))/2/a
         t2 = (-b+np.sqrt(disc))/2/a
-        if self.inRange(t1):
+        if t1>=self.getMinTau() and t1<=self.getMaxTau():
             times+=[t1]
-        if self.inRange(t2):
+        if t2>=self.getMinTau() and t2<=self.getMaxTau():
             times+=[t2]
         return times
     
@@ -260,7 +261,7 @@ If increase is false, fine the local maxima.
 def findExtrema(bounds,increase):
     ext = []
     for bnd in bounds:
-        if bnd.coeffs[2]!=0.0:
+        if abs(bnd.coeffs[2])>1e-10:
             a = 0.5*bnd.coeffs[2]
             if np.sign(a)==increase:
                 b = bnd.coeffs[1]-bnd.coeffs[2]*bnd.getMinTau()
@@ -354,7 +355,7 @@ def tryCombine(bnd1,bnd2):
     l1 = bnd1.isLower
     l2 = bnd2.isLower
     
-    if h1==h2 and v1==v2 and a1==a2 and t1==t2 and l1==l2:
+    if abs(h1-h2) + abs(v1-v2) + abs(a1-a2) + abs(t1-t2) + abs(l1-l2) < 1e-10:
         bnd1.setMaxTau(bnd2.getMaxTau())
         return True, [bnd1]
     return False, [bnd2]
