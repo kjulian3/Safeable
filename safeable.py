@@ -1,31 +1,21 @@
 import numpy as np
 import matplotlib
-#matplotlib.use('agg')
 from matplotlib import pyplot as plt
 from matplotlib.colors import ListedColormap
 from advisoryParams import *
 
 # CONSTANTS
-H=0      # Variable index for h
-VOWN = 1 # Variable for ownship climbrate
-VINT = 2 # Variable for intruder climbrate
-TAU=3    # Variable index for tau
-HP=100   # Height of NMAC puck
+HP=100   # Height of NMAC
 G=32.2   # Graviational acceleration
 
-# Advisory indices
-COC=0
-DNC=1
-DND=2
-DES1500 = 3
-CL1500 = 4
-SDES1500=5
-SCL1500=6
-SDES2500=7
-SCL2500=8
-
 '''
-h = coeffs[0] + coeffs[1]*(t-minTau) + 0.5coeffs[2]*(t-minTau)^2
+Represents quadratic boundaries that take the form:
+    h = coeffs[0] + coeffs[1]*(t-minTau) + 0.5coeffs[2]*(t-minTau)^2
+Four inputs required:
+    minTau: Minimum time boundary applies
+    maxTau: Maxaimum time boundary appliex
+    coeffs: List of coefficients that define boundary
+    isLower: True if the boundary is a lower boundary
 '''
 class Bound(object):
     def __init__(self,minTau,maxTau,coeffs,isLower):
@@ -46,67 +36,122 @@ class Bound(object):
         
         return rep
     
+    '''
+    Get a vector of times and altitudes for plotting
+    '''
     def getLine(self, dt=0.01):
         n = int((self.maxTau-self.minTau)/dt)
         t = np.linspace(self.minTau,self.maxTau,n)
         h = np.array([self.getH(ti) for ti in t])
         return t,h
        
+    '''
+    Get the minimimum time boundary applies
+    '''
     def getMinTau(self):
         return self.minTau
     
+    '''
+    Get the maximum time boundary applies
+    '''
     def getMaxTau(self):
         return self.maxTau
     
+    '''
+    Get altitude at a specified time
+    '''
     def getH(self,t):
         return self.coeffs[0] + self.coeffs[1]*(t-self.minTau) + 0.5*self.coeffs[2]*(t-self.minTau)**2
    
+    '''
+    Get altitude at the minimum time
+    '''
     def getH_minTau(self):
         return self.getH(self.minTau)
     
+    '''
+    Get altitude at the maximum time
+    '''
     def getH_maxTau(self):
         return self.getH(self.maxTau)
     
+    '''
+    Get the climbrate at the specified time
+    '''
     def getV(self,t):
         return self.coeffs[1] + self.coeffs[2]*(t-self.minTau)
     
+    '''
+    Get the climbrate at the minimum time
+    '''
     def getV_minTau(self):
         return self.getV(self.minTau)
     
+    '''
+    Get the climbrate at the maximum time
+    '''
     def getV_maxTau(self):
         return self.getV(self.maxTau)
     
+    '''
+    Set the minimum time and adjust coefficients as necessary
+    '''
     def setMinTau(self,newMinTau):
         diff = newMinTau - self.minTau
         self.coeffs[0] += self.coeffs[1]*diff + 0.5*self.coeffs[2]*diff**2
         self.coeffs[1] += self.coeffs[2]*diff
         self.minTau = newMinTau
-        
+    
+    '''
+    Set the maximum time
+    '''
     def setMaxTau(self,newMaxTau):
         self.maxTau = newMaxTau
-        
+    
+    '''
+    Change the type of inequality
+    '''
     def reverse(self):
         self.isLower = not self.isLower
-        
+      
+    '''
+    Return true if the specified time is within the minimum and maximum tau limit
+    '''
     def inRange(self, t):
         return self.minTau<= t and self.maxTau>t
     
+    '''
+    Reformulate the coefficients to take the form
+    h = a0 + a1*t + a2*t**2
+    '''
     def getStandardCoeffs(self):
         a0, a1, a2 = self.coeffs
         ma = self.minTau
         return [a0-a1*ma+0.5*a2*ma**2, a1-a2*ma, 0.5*a2]
     
+    '''
+    Return true if the boundaries specify the same function
+    '''
     def overlaps(self,bnd):
         c1 = self.getStandardCoeffs()
         c2 =  bnd.getStandardCoeffs()
         return np.all([c1[i]==c2[i] for i in range(len(c1))])
     
+    '''
+    Return true if the quadratic boundary is actually linear
+    '''
     def isLinear(self):
         return self.coeffs[2]==0.0
     
+    '''
+    Create a copy of the bound
+    '''
     def copy(self):
         return Bound(self.getMinTau(),self.getMaxTau(),[self.coeffs[0],self.coeffs[1],self.coeffs[2]],self.isLower)
     
+    '''
+    Compute the time at which the boundary reaches a certain altitude
+    '''
     def getTimeAtH(self,h):
         a0, a1, a2 = self.coeffs
         ma = self.minTau
@@ -128,16 +173,24 @@ class Bound(object):
             times+=[t2]
         return times
     
+    '''
+    Return true if the specified time is within the bounds and satisfies the boundaries inequality
+    '''
     def satisfies(self,h,t):
         if t<self.minTau or t>self.maxTau: return 0
         hBound = self.getH(t)
         if self.isLower and hBound<=h: return 1
         if not self.isLower and h<=hBound: return 1
         return 0
-        
+'''
+Takes a list of piecewie boundaries and determines if the given point is within boundaries
+'''
 def satisfiesBounds(bnds,h,t):
     return np.sum([bnd.satisfies(h,t) for bnd in bnds])==2
 
+'''
+Compute when two boundaries will intersect
+'''
 def intersectTimes(bound1, bound2):
     a0, a1, a2 = bound1.coeffs
     ma = bound1.minTau
@@ -165,7 +218,9 @@ def intersectTimes(bound1, bound2):
         times+=[t2]
     return times
         
-        
+'''
+Use the intersection time to truncate the bounds when they intersect
+'''
 def truncateBounds(boundsMin,boundsMax):
     minInd = 0
     maxInd = 0
@@ -183,6 +238,9 @@ def truncateBounds(boundsMin,boundsMax):
             maxInd+=1
     return boundsMin, boundsMax, -1
 
+'''
+Truncate the given bounds at the given time
+'''
 def truncBounds(boundsMin,boundsMax,t):
     minInd = 0
     while minInd < len(boundsMin) and not boundsMin[minInd].inRange(t):
@@ -194,7 +252,11 @@ def truncBounds(boundsMin,boundsMax,t):
     boundsMax[maxInd].setMaxTau(t)
     return boundsMin[:minInd+1], boundsMax[:maxInd+1]
         
-    
+'''
+Find the min/max points within the bounds.
+If increase is true, find the local minima.
+If increase is false, fine the local maxima.
+'''
 def findExtrema(bounds,increase):
     ext = []
     for bnd in bounds:
@@ -207,6 +269,10 @@ def findExtrema(bounds,increase):
                     ext += [(t,bnd.getH(t))]
     return ext
 
+'''
+To make the upper bound monotonically decrease and the lower bound monotonically
+increase, the boundaries should be flattened from the extrema points
+'''
 def flattenBound(bnd,ext,increase):
     ext_t,ext_h = ext
     if bnd.isLinear():
@@ -247,7 +313,9 @@ def flattenBound(bnd,ext,increase):
         else:
             return [Bound(bnd.minTau,bnd.maxTau,[ext_h,0,0],bnd.isLower)]
         
-
+'''
+Make the bounds monotonically increase or decrease
+'''
 def monotonic(bounds,increase): 
     ext = findExtrema(bounds,increase)
     if len(ext)==0: 
@@ -271,6 +339,9 @@ def monotonic(bounds,increase):
     finalBounds = combineBounds(finalBounds)
     return finalBounds
 
+'''
+Try to combine bounds if possible
+'''
 def tryCombine(bnd1,bnd2):
     h1 = bnd1.getH_maxTau()
     h2 = bnd2.getH_minTau()
@@ -288,6 +359,9 @@ def tryCombine(bnd1,bnd2):
         return True, [bnd1]
     return False, [bnd2]
     
+'''
+Combine boundaries that are the same function and adjacent to each other
+'''
 def combineBounds(bnds):
     finalBounds = []
     bInd = 1
@@ -303,7 +377,7 @@ def combineBounds(bnds):
 
 '''
 Use the "Inner" method for bounding a portion of the trajectory.
-Returns a list of Bounds to bound the trajectory
+Returns a list of bounds
 '''
 def innerApproximate(bnd,dt,dti):
     bounds = []
@@ -342,6 +416,10 @@ def innerApproximate(bnd,dt,dti):
         bounds+= [Bound(t0,t1,[h0,(h1-h0)/(t1-t0),0],bnd.isLower)]
     return bounds
 
+'''
+Use the "Outer" method to linearize the boundaries
+Returns a list of bounds
+'''
 def outerApproximate(bnd,dt,dti):
     bounds = []
     minTau = bnd.getMinTau()
@@ -381,6 +459,9 @@ def outerApproximate(bnd,dt,dti):
         bounds+= [Bound(t0,t1,[h0,(h1-h0)/(t1-t0),0],bnd.isLower)]
     return bounds
 
+'''
+Overapproximate a region defined by a set of boundaries
+'''
 def overApproximate(bnds,dt,dti):
     finalBounds = []
     for bnd in bnds:
@@ -391,7 +472,10 @@ def overApproximate(bnds,dt,dti):
             if bnd.coeffs[2]<0: finalBounds += outerApproximate(bnd,dt,dti)
             else: finalBounds += innerApproximate(bnd,dt,dti)
     return finalBounds
-        
+     
+'''
+Underapproximate a region defined by a set of boundaries
+'''
 def underApproximate(bnds,dt,dti):
     finalBounds = []
     for bnd in bnds:
@@ -553,7 +637,9 @@ def removeOverlap(bnds1,bnds2):
     finalBnds2+=bnds2[ind2:]
     return finalBnds1, finalBnds2
             
-
+'''
+Compute the unsafeable region that we need to check with Reluplex
+'''
 def getRegionToCheck(pra,ra,v,pd=0,eps=1,approx=False,overApprox=True,dt=1.0,dti=0.125):
     advisory = advisoryParams(ra,pd=pd,eps=eps)
     _,_,boundMin,boundMax = getSafeable(advisory,v)
@@ -568,6 +654,9 @@ def getRegionToCheck(pra,ra,v,pd=0,eps=1,approx=False,overApprox=True,dt=1.0,dti
         return linearizeRegion(boundMin+uBoundMin, boundMax+uBoundMax, overApprox,dt,dti)
     return boundMin+uBoundMin, boundMax+uBoundMax
 
+'''
+Linearize the boundaries
+'''
 def linearizeRegion(boundsMin,boundsMax,overApprox=True,dt=1.0,dti=0.125):
     if overApprox: return overApproximate(boundsMin,dt,dti), overApproximate(boundsMax,dt,dti)
     return underApproximate(boundsMin,dt,dti), underApproximate(boundsMax,dt,dti)
@@ -585,6 +674,9 @@ def getUnsafeRegion(pra,v,pd=0,eps=1):
     boundMin, boundMax,_ = truncateBounds(boundMin,boundMax)
     return boundMin,boundMax
 
+'''
+Plot all the safeable boundaries for all advisories that are possible from a given previous advisory
+'''
 def plotAll(pra,v,pd=0,eps=1,name="",withTraj=False,axes=None,plotUnsafe=False):
     if axes==None:
         fig = plt.figure(figsize=(7,5),dpi=160,)
@@ -602,7 +694,10 @@ def plotAll(pra,v,pd=0,eps=1,name="",withTraj=False,axes=None,plotUnsafe=False):
     
     axes.legend()
     return axes
-        
+
+'''
+Plot the unsafeable region of an advisory
+'''
 def plotGetRegionToCheck(pra,ra,v,pd=0,eps=1,name="",label="",c='k',axes=None, approx=False,overApprox=True,dt=1.0,dti=0.125):
     if axes==None:
         fig = plt.figure(figsize=(7,5),dpi=160,)

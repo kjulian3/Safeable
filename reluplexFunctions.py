@@ -18,49 +18,43 @@ def checkRegionConfig(cfg_file):
     cfg = configparser.ConfigParser()
     cfg.read(cfg_file)
     
-    # Advisory
+    # Read the config file
     pra = cfg.get("Advisory", "pra")
-    if len(pra)>2:
-        pra = advInd(pra)
-    else:
-        pra = int(pra)
+    if len(pra)>2: pra = advInd(pra)
+    else:          pra = int(pra)
         
     ra  = (cfg.get("Advisory", "ra"))
-    if len(ra)>2:
-        ra = advInd(ra)
-    else:
-        ra = int(ra)
-    if ra<0:
-        ras = getPossibleAdvisories(pra)
-    else:
-        ras = [ra]
+    if len(ra)>2: ra = advInd(ra)
+    else:         ra = int(ra)
         
-    vmin    = float(cfg.get("Advisory", "vmin"))
-    vmax    = float(cfg.get("Advisory", "vmax"))
-    deltaV  = float(cfg.get("Advisory", "deltaV"))
-    eps     = float(cfg.get("Advisory", "eps"))
-    pd      = float(cfg.get("Advisory", "pd"))
+    if ra<0: ras = getPossibleAdvisories(pra)
+    else:    ras = [ra]
+        
+    # Read settings from config file    
+    vmin       = float(cfg.get("Advisory", "vmin"))
+    vmax       = float(cfg.get("Advisory", "vmax"))
+    deltaV     = float(cfg.get("Advisory", "deltaV"))
+    eps        = float(cfg.get("Advisory", "eps"))
+    pd         = float(cfg.get("Advisory", "pd"))
+    overApprox =       cfg.get("Approx",   "overApprox") in ['true','True','y','yes','Yes','t','1']
+    dt         = float(cfg.get("Approx",   "dt"))
+    dti        = float(cfg.get("Approx",   "dti"))
+    version    =   int(cfg.get("Settings", "version"))
+    verbose    =       cfg.get("Settings", "verbose") in ['true','True','y','yes','Yes','t','1']
     
-    
-    overApprox  = cfg.get("Approx", "overApprox") in ['true','True','y','yes','Yes','t','1']
-    dt          = float(cfg.get("Approx", "dt"))
-    dti         = float(cfg.get("Approx", "dti"))
-    
-    version = int(cfg.get("Settings","version"))
-    verbose = cfg.get("Settings","verbose") in ['true','True','y','yes','Yes','t','1']
-    
+    # Make the folder where the results of the Reluplex query will be run
     if overApprox: resFolder = "res_overApprox"
     else: resFolder = "res_underApprox"
     resFolder+= "_dt%.4f_dti%.4f_v%d"%(dt,dti,version)
-    
-    
     if not os.path.exists(resFolder):
         os.makedirs(resFolder)
     
+    # Ensure that dt and dti are valid
     if dt % dti > 1e-6 or dt<dti*2:
         print("Make sure dt is an integer multiple of dti and that dt is at least twice dti!")
         return
     
+    # Check each advisory
     for ra in ras:
         checkRegion(pra,ra,vmin,vmax,deltaV,eps,pd,overApprox,dt,dti,resFolder,verbose)
 
