@@ -841,7 +841,7 @@ def splitBnds(bnds):
             bListAll += [(bList)]
             
     # Merge regions when possible for tau=6
-    mergePairs(bListAll)
+    # mergePairs(bListAll)
     return bListAll
 
 """
