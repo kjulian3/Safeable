@@ -877,10 +877,18 @@ Attempts to merge pairs of bounds when tau=6 for min and max
 A new bound is returned if the merge is possible, otherwise returns None
 """
 def tryMerge(pair1,pair2):
-    u1 = pair1[0]
-    u2 = pair2[0]
-    l1 = pair1[1]
-    l2 = pair2[1]
+    if pair1[0].isLower:
+        l1 = pair1[0]
+        u1 = pair1[1]
+    else:
+        u1 = pair1[0]
+        l1 = pair1[1]
+    if pair2[0].isLower:
+        l2 = pair2[0]
+        u2 = pair2[1]
+    else:
+        u2 = pair2[0]
+        l2 = pair2[1]
     
     if u1.getMaxTau()==6.0 and u2.getMaxTau()==6.0:
         
@@ -889,7 +897,7 @@ def tryMerge(pair1,pair2):
             if l1.getH_maxTau()>l2.getH_maxTau():
                 l1 = l2.copy()
             return [u1,l1]
-        elif u1.getH_maxTau()<u2.getH_maxTau() and u1.getH_maxTau()>l2.getH_maxTau():
+        elif u1.getH_maxTau()<=u2.getH_maxTau() and u1.getH_maxTau()>=l2.getH_maxTau():
             u1 = u2.copy()
             if l1.getH_maxTau()>l2.getH_maxTau():
                 l1 = l2.copy()
