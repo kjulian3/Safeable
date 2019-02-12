@@ -78,6 +78,7 @@ def genDictSat(directory):
     adv = {}
     inputs = []
 
+    counter=0
     for filename in os.listdir(directory):
         lines  = []
         # Decompose filename
@@ -107,7 +108,8 @@ def genDictSat(directory):
 
                 # Read in input lines
                 for i in range(4):
-                    lines += [f.readline()]
+                    dat = f.readline()
+                    lines += [dat]
 
                 if pra not in adv:
                     adv[pra] = {}
@@ -119,15 +121,18 @@ def genDictSat(directory):
                     adv[pra][ra] = 1
                 
                 # Read in Inputs of SAT  
-                inputs += [readInputs(lines)]
+                dat = readInputs(lines)
+                if dat[1] == 6.0:
+                    counter += 1
+                inputs += [dat]
 
-    return adv, inputs
+    return adv, inputs, counter
 
 """
 For each pra, return total number of SAT points
 """
 def countSat(directory, pra="COC"):
-    adv,inputs = genDictSat(directory)
+    adv,inputs,offset = genDictSat(directory)
 
     # Iterate through all pra's and count total queries
     total = 0 
@@ -140,7 +145,7 @@ def countSat(directory, pra="COC"):
 Return total number of SAT points (all pra's)
 """
 def totalSat(directory):
-    adv,inputs = genDictSat(directory)
+    adv,inputs,offset = genDictSat(directory)
 
     # Iterate through all pra's and count total queries
     total = 0
