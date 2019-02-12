@@ -56,7 +56,8 @@ def checkRegionConfig(cfg_file):
     
     # Check each advisory
     for ra in ras:
-        checkRegion(pra,ra,vmin,vmax,deltaV,eps,pd,overApprox,dt,dti,resFolder,verbose)
+        if ra is not COC:
+            checkRegion(pra,ra,vmin,vmax,deltaV,eps,pd,overApprox,dt,dti,resFolder,verbose)
 
 """
 Check safeable region given a previous RA and RA
@@ -120,6 +121,12 @@ def checkSlice(pra,ra,v,pd,eps,nnetFile,resFile,logFile,bnds,count,verbose):
     net.setLowerBound(inputVars[TAU],(bnds[0].getMinTau()-mu_tau)/R_tau)
     net.setUpperBound(inputVars[TAU],(bnds[0].getMaxTau()-mu_tau)/R_tau)
     
+    # H upper and lower bounds
+    minH = np.min([bnds[0].getH_minTau(),bnds[1].getH_minTau(),bnds[0].getH_maxTau(),bnds[1].getH_maxTau()])
+    maxH = np.max([bnds[0].getH_minTau(),bnds[1].getH_minTau(),bnds[0].getH_maxTau(),bnds[1].getH_maxTau()])
+    net.setLowerBound(inputVars[H],minH/R_h)
+    net.setUpperBound(inputVars[H],maxH/R_h)
+    
     # Apply each bound in set
     for bnd in bnds:
         
@@ -174,6 +181,8 @@ def checkSlice(pra,ra,v,pd,eps,nnetFile,resFile,logFile,bnds,count,verbose):
                 print("{} = {}".format(advName(i), vals[outputVars[i]]*R_out + mu_out))
 
         file.write("SAT\n")
+        file.write("Tau Range:\n")
+        file.write("{}, {}".format(bnds[0].getMinTau(), bnds[0].getMaxTau()))
         # Unnormalize input values
         file.write("\nInputs:\n")
         file.write("h   = {}\n".format(vals[inputVars[0]]*R_h))
