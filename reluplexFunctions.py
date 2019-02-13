@@ -122,8 +122,8 @@ def checkSlice(pra,ra,v,pd,eps,nnetFile,resFile,logFile,bnds,count,verbose):
     net.setUpperBound(inputVars[TAU],(bnds[0].getMaxTau()-mu_tau)/R_tau)
     
     # H upper and lower bounds
-    minH = np.min([bnds[0].getH_minTau(),bnds[1].getH_minTau(),bnds[0].getH_maxTau(),bnds[1].getH_maxTau()])
-    maxH = np.max([bnds[0].getH_minTau(),bnds[1].getH_minTau(),bnds[0].getH_maxTau(),bnds[1].getH_maxTau()])
+    minH = np.min([bnds[0].getH_minTau(),bnds[1].getH_minTau(),bnds[0].getH_maxTau(),bnds[1].getH_maxTau()])-20.0
+    maxH = np.max([bnds[0].getH_minTau(),bnds[1].getH_minTau(),bnds[0].getH_maxTau(),bnds[1].getH_maxTau()])+20.0
     net.setLowerBound(inputVars[H],minH/R_h)
     net.setUpperBound(inputVars[H],maxH/R_h)
     
@@ -156,11 +156,18 @@ def checkSlice(pra,ra,v,pd,eps,nnetFile,resFile,logFile,bnds,count,verbose):
             Reluplex.addInequality(net, [outputVars[raInd], outputVars[i]], [-1, 1],0)
 
     # Solve
-    stats,vals = net.solve(logFile,verbose=False)
+    result,vals = net.solve(logFile,verbose=False)
+    error = "SAT" not in result
 
     # Print out results and save to file
     file = open(resFile,"a")
-    if len(vals)==0:
+    if error:
+        if verbose:
+            print("\nERROR: %d"%count)
+            print("Pra: %s, RA: %s"%(advName(pra),advName(ra)))
+        file.write("ERROR\n")
+        
+    elif len(vals)==0:
         if verbose:
             print("\nUNSAT: %d"%count)
             print("Pra: %s, RA: %s"%(advName(pra),advName(ra)))
